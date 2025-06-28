@@ -1,0 +1,152 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+    <title>Dashboard - Spendo</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            margin: 30px 0;
+            text-align: center;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            padding: 10px 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        .msg {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .msg.success {
+            color: green;
+        }
+        .msg.error {
+            color: red;
+        }
+        .logout-link {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <a href="{% url 'logout' %}" class="logout-link">Logout</a>
+
+    <div class="container">
+        <h1>Welcome, {{ user.username }} 👋</h1>
+        <p class="msg">Enter your expense in this format: <strong>"Spent 250 on groceries"</strong></p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <p class="msg {{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST">
+  {% csrf_token %}
+  <input type="text" name="voice_text" placeholder="e.g. Spent 300 on groceries">
+  <input type="hidden" name="add_expense_btn" value="1">
+  <button type="submit">Add Expense</button>
+</form>
+
+        {% if expenses %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Amount (₹)</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                        <tr>
+                            <td>{{ expense.amount }}</td>
+                            <td>{{ expense.category }}</td>
+                            <td>{{ expense.description }}</td>
+                            <td>{{ expense.date }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="text-align:center;">No expenses yet.</p>
+        {% endif %}
+    </div>
+    <button type="button" id="mic-btn">🎤 Speak</button>
+<p id="voice-output" style="text-align:center; font-style: italic;"></p>
+<script>
+    const micBtn = document.getElementById("mic-btn");
+    const voiceOutput = document.getElementById("voice-output");
+    const voiceInput = document.querySelector("input[name='voice_text']");
+
+    micBtn.addEventListener("click", () => {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = "en-IN";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.start();
+
+        micBtn.innerText = "🎙️ Listening...";
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            voiceInput.value = transcript;
+            voiceOutput.innerText = `You said: "${transcript}"`;
+            micBtn.innerText = "🎤 Speak";
+        };
+
+        recognition.onerror = function(event) {
+            voiceOutput.innerText = "Sorry, couldn't recognize. Try again.";
+            micBtn.innerText = "🎤 Speak";
+        };
+
+        recognition.onend = function() {
+            micBtn.innerText = "🎤 Speak";
+        };
+    });
+</script>
+<form method="get" action="{% url 'export_monthly' %}">
+    <button type="submit">Export Monthly Spend Sheet</button>
+</form>
+
+</body>
+</html>
